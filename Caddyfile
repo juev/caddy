@@ -1,0 +1,7 @@
+# Default Caddyfile
+# This is a basic configuration file for Caddy
+# Replace this with your actual configuration
+
+:80 {
+    respond "Caddy is running with custom plugins!"
+}
