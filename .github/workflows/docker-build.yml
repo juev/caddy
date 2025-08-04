@@ -70,12 +70,3 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-    - name: Update repo description
-      if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-      uses: peter-evans/dockerhub-description@v4
-      with:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-        repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        short-description: "Custom Caddy build with WebDAV, Tailscale, and Cloudflare DNS plugins"
-        readme-filepath: ./README.md
