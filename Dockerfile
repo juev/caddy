@@ -36,7 +36,7 @@ RUN mkdir -p /var/lib/caddy /var/log/caddy /etc/caddy \
 USER caddy
 
 # Expose ports
-EXPOSE 80 443 2019
+# EXPOSE 80 443 2019
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
