@@ -88,17 +88,13 @@ example.com {
 
 ```caddyfile
 {
-      servers {
-          listener_wrappers {
-              layer4 {
-                  @ssh ssh
-                  route @ssh {
-                      proxy forgejo:22
-                  }
-              }
-              tls
-          }
-      }
+    layer4 {
+        :22 {
+            route {
+                proxy forgejo:22
+            }
+        }
+    }
 }
 ```
 
