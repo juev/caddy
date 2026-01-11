@@ -9,8 +9,8 @@ Custom Caddy build with additional plugins for enhanced functionality.
 This Docker image includes Caddy web server with the following plugins:
 
 - **[caddy-webdav](https://github.com/mholt/caddy-webdav)** - WebDAV server functionality
-- **[caddy-tailscale](https://github.com/tailscale/caddy-tailscale)** - Tailscale integration for secure networking
 - **[caddy-dns/cloudflare](https://github.com/caddy-dns/cloudflare)** - Cloudflare DNS provider for automatic HTTPS
+- **[mholt/caddy-l4](https://github.com/mholt/caddy-l4)** - Layer 4 (TCP/UDP) app for Caddy
 
 ## Quick Start
 
@@ -45,10 +45,6 @@ docker run -d \
 
 ## Configuration
 
-### Environment Variables
-
-- `CADDY_CONFIG_PATH` - Path to Caddyfile (default: `/etc/caddy/Caddyfile`)
-
 ### Volumes
 
 - `/data` - Caddy data directory (automatic HTTPS certificates, etc.)
@@ -77,21 +73,6 @@ webdav.example.com {
 }
 ```
 
-### Tailscale Integration
-
-```caddyfile
-{
-    servers {
-        trusted_proxies tailscale
-    }
-}
-
-internal.example.ts.net {
-    respond "Hello from Tailscale!"
-    tailscale_auth
-}
-```
-
 ### Cloudflare DNS
 
 ```caddyfile
@@ -100,6 +81,24 @@ example.com {
         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
     }
     respond "Hello, World!"
+}
+```
+
+### Layer4
+
+```caddyfile
+{
+      servers {
+          listener_wrappers {
+              layer4 {
+                  @ssh ssh
+                  route @ssh {
+                      proxy forgejo:22
+                  }
+              }
+              tls
+          }
+      }
 }
 ```
 
