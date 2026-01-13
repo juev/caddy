@@ -173,6 +173,180 @@ With these labels and environment variables, Caddy will automatically:
 - `CADDY_DOCKER_LABEL_PREFIX` - Label prefix to look for (default: `caddy`)
 - `CADDY_DOCKER_POLLINGINTERVAL` - How often to poll Docker for changes (default: `30s`)
 
+### Troubleshooting: Containers from Other Compose Files Not Discovered
+
+If Caddy is not discovering containers from other `docker-compose.yml` files, check the following:
+
+#### 1. **Shared Docker Network** (Most Common Issue)
+
+All containers that need to be proxied must be on the same Docker network as Caddy. Use an **external network**:
+
+**Step 1:** Create a shared network:
+
+```bash
+docker network create caddy-network
+```
+
+**Step 2:** In your Caddy `docker-compose.yml`:
+
+```yaml
+networks:
+  caddy-network:
+    external: true
+```
+
+**Step 3:** In your other `docker-compose.yml` files, use the same external network:
+
+```yaml
+services:
+  your-app:
+    labels:
+      caddy: app.example.com
+      caddy.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - caddy-network
+
+networks:
+  caddy-network:
+    external: true
+```
+
+#### 2. **CADDY_INGRESS_NETWORKS Configuration**
+
+If you're using specific networks, make sure `CADDY_INGRESS_NETWORKS` includes all networks where your containers are running:
+
+```yaml
+environment:
+  # List all networks separated by commas
+  - CADDY_INGRESS_NETWORKS=caddy-network,app-network,other-network
+  
+  # OR leave empty to monitor all networks (may be slower)
+  - CADDY_INGRESS_NETWORKS=
+```
+
+#### 3. **Docker Socket Access**
+
+Ensure Docker socket is mounted (read-only for security):
+
+```yaml
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock:ro
+```
+
+#### 4. **Caddyfile Configuration**
+
+When using `caddy docker-proxy`, your Caddyfile should contain **only global options**. Domain-specific configuration comes from Docker labels:
+
+```caddyfile
+{
+    # Global settings only (e.g., acme_dns)
+    acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+}
+
+# Static sites can still be defined here
+nas.example.com {
+    # Static configuration
+}
+```
+
+**Do NOT** define domains in Caddyfile that should be managed by docker-proxy labels - this will cause conflicts.
+
+#### 5. **Label Format**
+
+Ensure labels are correctly formatted in your other compose files:
+
+```yaml
+services:
+  your-app:
+    labels:
+      # Domain name
+      caddy: app.example.com
+      
+      # Reverse proxy configuration
+      caddy.reverse_proxy: "{{upstreams 80}}"
+      
+      # Optional: Additional Caddy directives
+      caddy.tls: "internal"
+      caddy.rewrite: "/api/* /api/*"
+```
+
+#### 6. **Verify Container Discovery**
+
+Check if Caddy can see your containers:
+
+```bash
+# Check Caddy logs
+docker logs caddy
+
+# Verify containers are on the same network
+docker network inspect caddy-network
+
+# Check if containers have correct labels
+docker inspect <container-name> | grep -A 10 Labels
+```
+
+#### 7. **Complete Example Setup**
+
+**Caddy compose file (`caddy-compose.yml`):**
+
+```yaml
+version: '3.8'
+services:
+  caddy:
+    image: ghcr.io/juev/caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - CADDY_INGRESS_NETWORKS=
+      - CADDY_DOCKER_EXPOSEDBYDEFAULT=false
+    networks:
+      - caddy-network
+
+networks:
+  caddy-network:
+    external: true
+```
+
+**Other service compose file (`app-compose.yml`):**
+
+```yaml
+version: '3.8'
+services:
+  app:
+    image: nginx:alpine
+    container_name: my-app
+    labels:
+      caddy: app.example.com
+      caddy.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - caddy-network
+
+networks:
+  caddy-network:
+    external: true
+```
+
+**Start both:**
+
+```bash
+# Create network first
+docker network create caddy-network
+
+# Start Caddy
+docker-compose -f caddy-compose.yml up -d
+
+# Start your app
+docker-compose -f app-compose.yml up -d
+```
+
 ## Building Locally
 
 ```bash

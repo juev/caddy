@@ -1,7 +1,17 @@
-# Default Caddyfile
-# This is a basic configuration file for Caddy
-# Replace this with your actual configuration
+# Global configuration for Caddy with docker-proxy
+# When using docker-proxy, only global options should be here
+# Domain-specific configuration comes from Docker container labels
 
+{
+    # Global ACME configuration with Cloudflare DNS (if needed)
+    # acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    
+    # Optional: Enable admin API for debugging
+    # admin localhost:2019
+}
+
+# Static site configuration (if needed)
+# This will work alongside docker-proxy discovered containers
 :80 {
     respond "Caddy is running with custom plugins!"
 }
