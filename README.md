@@ -135,6 +135,7 @@ services:
     environment:
       - CLOUDFLARE_API_TOKEN=your_cloudflare_api_token_here
       # Docker proxy configuration via environment variables
+      - CADDY_DOCKER_CADDYFILE_PATH=/etc/caddy/Caddyfile
       - CADDY_INGRESS_NETWORKS=caddy-network
       - CADDY_DOCKER_EXPOSEDBYDEFAULT=false
     networks:
@@ -168,6 +169,7 @@ With these labels and environment variables, Caddy will automatically:
 
 **Available environment variables for caddy-docker-proxy:**
 
+- `CADDY_DOCKER_CADDYFILE_PATH` - Path to Caddyfile with global options
 - `CADDY_INGRESS_NETWORKS` - Comma-separated list of Docker networks to use (default: all networks)
 - `CADDY_DOCKER_EXPOSEDBYDEFAULT` - Whether to expose containers without labels (default: `true`)
 - `CADDY_DOCKER_LABEL_PREFIX` - Label prefix to look for (default: `caddy`)
