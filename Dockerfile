@@ -1,7 +1,15 @@
+# syntax=docker/dockerfile:1.4
 FROM caddy:2-builder AS builder
 
-# Build Caddy with plugins
-RUN xcaddy build \
+# Set environment variables for Go cache
+ENV GOCACHE=/root/.cache/go-build
+ENV GOMODCACHE=/go/pkg/mod
+ENV XCADDY_GO_BUILD_FLAGS=-ldflags=-linkmode=external
+
+# Build Caddy with plugins using cache mounts for faster builds
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    xcaddy build \
     --with github.com/mholt/caddy-webdav \
     --with github.com/caddy-dns/cloudflare \
     --with github.com/mholt/caddy-l4
