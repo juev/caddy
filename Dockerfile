@@ -18,3 +18,5 @@ FROM caddy:2-alpine
 
 # Copy caddy binary from builder
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+
+CMD ["caddy", "docker-proxy"]

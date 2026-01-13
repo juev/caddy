@@ -111,17 +111,10 @@ Example Caddyfile with global Cloudflare DNS configuration for automatic HTTPS:
 {
     # Global ACME configuration with Cloudflare DNS
     acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
-    
-    # Docker proxy configuration
-    docker_proxy {
-        endpoint unix:///var/run/docker.sock
-        exposedbydefault false
-        network caddy-network
-    }
 }
 ```
 
-Example `docker-compose.yml` with labels for automatic upstream configuration:
+Example `docker-compose.yml` with environment variables and labels for automatic upstream configuration:
 
 ```yaml
 version: '3.8'
@@ -141,6 +134,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       - CLOUDFLARE_API_TOKEN=your_cloudflare_api_token_here
+      # Docker proxy configuration via environment variables
+      - CADDY_INGRESS_NETWORKS=caddy-network
+      - CADDY_DOCKER_EXPOSEDBYDEFAULT=false
     networks:
       - caddy-network
 
@@ -162,13 +158,20 @@ networks:
     driver: bridge
 ```
 
-With these labels, Caddy will automatically:
+With these labels and environment variables, Caddy will automatically:
 
 - Configure `example.com` to proxy to the `app` container
 - Use the global Cloudflare DNS configuration (`acme_dns`) for automatic HTTPS certificate generation
 - Update configuration when the container starts/stops
+- Only expose containers with `caddy` labels (due to `CADDY_DOCKER_EXPOSEDBYDEFAULT=false`)
+- Use the `caddy-network` for container discovery (via `CADDY_INGRESS_NETWORKS`)
 
-Note: Since `acme_dns cloudflare` is configured globally in the Caddyfile, you don't need to specify `caddy.tls.dns: cloudflare` in the container labels.
+**Available environment variables for caddy-docker-proxy:**
+
+- `CADDY_INGRESS_NETWORKS` - Comma-separated list of Docker networks to use (default: all networks)
+- `CADDY_DOCKER_EXPOSEDBYDEFAULT` - Whether to expose containers without labels (default: `true`)
+- `CADDY_DOCKER_LABEL_PREFIX` - Label prefix to look for (default: `caddy`)
+- `CADDY_DOCKER_POLLINGINTERVAL` - How often to poll Docker for changes (default: `30s`)
 
 ## Building Locally
 
