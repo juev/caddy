@@ -8,9 +8,9 @@ Custom Caddy build with additional plugins for enhanced functionality.
 
 This Docker image includes Caddy web server with the following plugins:
 
-- **[caddy-webdav](https://github.com/mholt/caddy-webdav)** - WebDAV server functionality
 - **[caddy-dns/cloudflare](https://github.com/caddy-dns/cloudflare)** - Cloudflare DNS provider for automatic HTTPS
 - **[mholt/caddy-l4](https://github.com/mholt/caddy-l4)** - Layer 4 (TCP/UDP) app for Caddy
+- **[caddy-docker-proxy](https://github.com/lucaslorentz/caddy-docker-proxy)** - Automatic proxy configuration from Docker containers
 
 ## Quick Start
 
@@ -60,20 +60,23 @@ docker run -d \
 
 ## Plugin Usage Examples
 
-### WebDAV Server
+### Cloudflare DNS
+
+You can configure Cloudflare DNS for automatic HTTPS certificates in two ways:
+
+**Global configuration** (applies to all sites):
 
 ```caddyfile
-webdav.example.com {
-    webdav {
-        root /srv/webdav
-    }
-    basicauth {
-        admin $2a$14$hashed_password_here
-    }
+{
+    acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+}
+
+example.com {
+    respond "Hello, World!"
 }
 ```
 
-### Cloudflare DNS
+**Per-site configuration**:
 
 ```caddyfile
 example.com {
@@ -83,6 +86,8 @@ example.com {
     respond "Hello, World!"
 }
 ```
+
+The global `acme_dns` configuration is recommended when using multiple sites with Cloudflare DNS, as it avoids repeating the configuration for each site.
 
 ### Layer4
 
@@ -97,6 +102,73 @@ example.com {
     }
 }
 ```
+
+### Docker Proxy with Cloudflare DNS
+
+Example Caddyfile with global Cloudflare DNS configuration for automatic HTTPS:
+
+```caddyfile
+{
+    # Global ACME configuration with Cloudflare DNS
+    acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    
+    # Docker proxy configuration
+    docker_proxy {
+        endpoint unix:///var/run/docker.sock
+        exposedbydefault false
+        network caddy-network
+    }
+}
+```
+
+Example `docker-compose.yml` with labels for automatic upstream configuration:
+
+```yaml
+version: '3.8'
+
+services:
+  caddy:
+    image: ghcr.io/juev/caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - CLOUDFLARE_API_TOKEN=your_cloudflare_api_token_here
+    networks:
+      - caddy-network
+
+  app:
+    image: nginx:alpine
+    container_name: my-app
+    labels:
+      caddy: example.com
+      caddy.reverse_proxy: "{{upstreams 80}}"
+    networks:
+      - caddy-network
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  caddy-network:
+    driver: bridge
+```
+
+With these labels, Caddy will automatically:
+
+- Configure `example.com` to proxy to the `app` container
+- Use the global Cloudflare DNS configuration (`acme_dns`) for automatic HTTPS certificate generation
+- Update configuration when the container starts/stops
+
+Note: Since `acme_dns cloudflare` is configured globally in the Caddyfile, you don't need to specify `caddy.tls.dns: cloudflare` in the container labels.
 
 ## Building Locally
 
