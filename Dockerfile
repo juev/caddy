@@ -4,7 +4,6 @@ FROM caddy:2-builder AS builder
 # Set environment variables for Go cache
 ENV GOCACHE=/root/.cache/go-build
 ENV GOMODCACHE=/go/pkg/mod
-ENV XCADDY_GO_BUILD_FLAGS=-ldflags=-linkmode=external
 
 # Build Caddy with plugins using cache mounts for faster builds
 RUN --mount=type=cache,target=/root/.cache/go-build \
